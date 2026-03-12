@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/baguettebox.js/1.8.1/baguetteBox.min.css">
+
+<style>
+
+.tz-gallery{
+padding:40px;
+}
+
+.tz-gallery .thumbnail{
+padding:0;
+margin-bottom:30px;
+background:#fff;
+border-radius:4px;
+border:none;
+transition:0.15s ease-in-out;
+box-shadow:0 8px 15px rgba(0,0,0,0.06);
+}
+
+.tz-gallery .thumbnail:hover{
+transform:translateY(-10px) scale(1.02);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<section id="gallery">
+<div class="container gallery-container">
+
+<div class="tz-gallery">
+<div class="row" id="gallery-row">
+</div>
+</div>
+
+</div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/baguettebox.js/1.8.1/baguetteBox.min.js"></script>
+
+<script>
+
+const username = "a3yk"
+const repo = "portfolio"
+const folder = "FOLDER"   // example: images
+
+const apiURL = `https://api.github.com/repos/${username}/${repo}/contents/${folder}`
+
+fetch(apiURL)
+.then(response => response.json())
+.then(data => {
+
+const gallery = document.getElementById("gallery-row")
+
+data
+.filter(file => file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+.forEach((file, index) => {
+
+const delay = index * 20
+
+gallery.innerHTML += `
+<div class="col-sm-6 col-md-4" data-aos="flip-up" data-aos-delay="${delay}">
+<div class="thumbnail">
+<a class="lightbox" href="${file.download_url}">
+<img src="${file.download_url}">
+</a>
+</div>
+</div>
+`
+
+})
+
+baguetteBox.run('.tz-gallery')
+
+})
+
+</script>
+
+</body>
+</html>
