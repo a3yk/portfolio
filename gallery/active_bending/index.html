@@ -72,6 +72,82 @@ object-fit:contain;
 #baguetteBox-overlay{
 background:rgba(0,0,0,0.85);
 }
+
+/* ---------- thumbnail hover refinement ---------- */
+
+.gallery a{
+border-radius:2;
+overflow:hidden;
+}
+
+.gallery img{
+transition:transform 0.35s ease;
+}
+
+.gallery a:hover img{
+transform:scale(1.04);
+}
+
+
+/* ---------- popup overlay style ---------- */
+
+#baguetteBox-overlay{
+background:rgba(0,0,0,0.88);
+transition:opacity .35s ease;
+}
+
+
+/* ---------- space around popup image ---------- */
+
+#baguetteBox-overlay .full-image{
+padding:10vh 10vw;
+box-sizing:border-box;
+}
+
+
+/* ---------- smooth image appearance ---------- */
+
+#baguetteBox-overlay img{
+max-width:100%;
+max-height:100%;
+object-fit:contain;
+transform:scale(.96);
+opacity:0;
+transition:all .35s ease;
+}
+
+#baguetteBox-overlay.visible img{
+transform:scale(1);
+opacity:1;
+}
+
+
+/* ---------- navigation arrows minimal ---------- */
+
+.baguetteBox-button{
+background:transparent !important;
+opacity:0;
+transition:opacity .25s ease;
+}
+
+
+/* show arrows only when hovering */
+
+#baguetteBox-overlay:hover .baguetteBox-button{
+opacity:.35;
+}
+
+#baguetteBox-overlay:hover .baguetteBox-button:hover{
+opacity:.75;
+}
+
+
+/* ---------- arrow icon style ---------- */
+
+.baguetteBox-button svg{
+fill:white;
+filter:drop-shadow(0 0 4px rgba(0,0,0,0.4));
+}
   
 </style>
 
@@ -87,7 +163,7 @@ background:rgba(0,0,0,0.85);
 
 const username = "a3yk"
 const repo = "portfolio"
-const folder = "Active_bending_with_reed_bundle_G"   // example: projects/images
+const folder = "gallery/active_bending"   // example: projects/images
 
 const apiURL = `https://api.github.com/repos/${username}/${repo}/contents/${folder}`
 
