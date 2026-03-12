@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/baguettebox.js/1.8.1/baguetteBox.min.css">
+
+<style>
+
+body{
+margin:0;
+}
+
+.gallery{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+gap:20px;
+padding:20px;
+}
+
+.gallery a{
+display:block;
+overflow:hidden;
+border-radius:8px;
+box-shadow:0 6px 12px rgba(0,0,0,0.08);
+transition:transform 0.2s ease;
+}
+
+.gallery a:hover{
+transform:translateY(-5px);
+}
+
+.gallery img{
+width:100%;
+height:100%;
+object-fit:cover;
+display:block;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="gallery" id="gallery"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/baguettebox.js/1.8.1/baguetteBox.min.js"></script>
+
+<script>
+
+const username = "a3yk"
+const repo = "portfolio"
+const folder = "Active_bending_with_reed_bundle_G"   // example: projects/images
+
+const apiURL = `https://api.github.com/repos/${username}/${repo}/contents/${folder}`
+
+fetch(apiURL)
+.then(res => res.json())
+.then(data => {
+
+const gallery = document.getElementById("gallery")
+
+data
+.filter(file => file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+
+// auto sort by filename
+.sort((a,b)=>a.name.localeCompare(b.name))
+
+.forEach(file => {
+
+gallery.innerHTML += `
+<a class="lightbox" href="${file.download_url}">
+<img loading="lazy" src="${file.download_url}">
+</a>
+`
+
+})
+
+baguetteBox.run('.gallery')
+
+})
+
+</script>
+
+</body>
+</html>
