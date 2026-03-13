@@ -2,198 +2,251 @@
 <html lang="en">
 
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/baguettebox.js/1.8.1/baguetteBox.min.css">
 
 <style>
 
-body{
-margin:0;
+/* ---------- colour tokens ---------- */
+:root {
+  --bg:          #f4f4f4;
+  --card-shadow: rgba(0,0,0,0.08);
+  --btn-bg:      rgba(0,0,0,0.07);
+  --btn-color:   #333;
+  --btn-hover:   rgba(0,0,0,0.13);
+  --icon-color:  #333;
 }
 
-.gallery{
-display:grid;
-grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
-gap:20px;
-padding:20px;
+body.dark {
+  --bg:          #1a1a1a;
+  --card-shadow: rgba(0,0,0,0.4);
+  --btn-bg:      rgba(255,255,255,0.07);
+  --btn-color:   #e5e5e5;
+  --btn-hover:   rgba(255,255,255,0.13);
+  --icon-color:  #e5e5e5;
 }
 
-.gallery a{
-display:block;
-overflow:hidden;
-border-radius:8px;
-box-shadow:0 6px 12px rgba(0,0,0,0.08);
-transition:transform 0.2s ease;
+/* ---------- base ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background-color: var(--bg);
+  transition: background-color 0.3s;
+  font-family: sans-serif;
 }
 
-.gallery a:hover{
-transform:translateY(-5px);
+/* ---------- mode toggle button ---------- */
+#mode-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 999;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--btn-bg);
+  color: var(--btn-color);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
 }
 
-.gallery img{
-width:100%;
-height:100%;
-object-fit:cover;
-display:block;
+#mode-btn:hover {
+  background-color: var(--btn-hover);
 }
 
-
-.gallery a{
-border-radius:4px;
+/* ---------- gallery grid ---------- */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  padding-top: 64px; /* clear the toggle button */
 }
 
-.baguetteBox-button{
-background-color:rgba(120,120,120,0.25) !important;
+.gallery a {
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 6px 12px var(--card-shadow);
+  transition: transform 0.2s ease;
 }
 
-.baguetteBox-button svg{
-fill:white;
+.gallery a:hover {
+  transform: translateY(-5px);
 }
 
-#baguetteBox-overlay img{
-max-width:20%;
-max-height:20%;
-margin:auto;
+.gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease;
 }
 
-/* create margin around popup image */
-#baguetteBox-overlay .full-image{
-padding:8vh 8vw;
-box-sizing:border-box;
+.gallery a:hover img {
+  transform: scale(1.04);
 }
 
-/* prevent image from touching edges */
-#baguetteBox-overlay img{
-max-width:100%;
-max-height:100%;
-object-fit:contain;
+/* ---------- baguetteBox overrides ---------- */
+#baguetteBox-overlay {
+  background: rgba(0, 0, 0, 0.88);
+  transition: opacity 0.35s ease;
 }
 
-#baguetteBox-overlay{
-background:rgba(0,0,0,0.85);
+#baguetteBox-overlay .full-image {
+  padding: 10vh 10vw;
+  box-sizing: border-box;
 }
 
-/* ---------- thumbnail hover refinement ---------- */
-
-.gallery a{
-border-radius:2;
-overflow:hidden;
+#baguetteBox-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform: scale(0.96);
+  opacity: 0;
+  transition: all 0.35s ease;
 }
 
-.gallery img{
-transition:transform 0.35s ease;
+#baguetteBox-overlay.visible img {
+  transform: scale(1);
+  opacity: 1;
 }
 
-.gallery a:hover img{
-transform:scale(1.04);
+.baguetteBox-button {
+  background: transparent !important;
+  opacity: 0;
+  transition: opacity 0.25s ease;
 }
 
-
-/* ---------- popup overlay style ---------- */
-
-#baguetteBox-overlay{
-background:rgba(0,0,0,0.88);
-transition:opacity .35s ease;
+#baguetteBox-overlay:hover .baguetteBox-button {
+  opacity: 0.35;
 }
 
-
-/* ---------- space around popup image ---------- */
-
-#baguetteBox-overlay .full-image{
-padding:10vh 10vw;
-box-sizing:border-box;
+#baguetteBox-overlay:hover .baguetteBox-button:hover {
+  opacity: 0.75;
 }
 
-
-/* ---------- smooth image appearance ---------- */
-
-#baguetteBox-overlay img{
-max-width:100%;
-max-height:100%;
-object-fit:contain;
-transform:scale(.96);
-opacity:0;
-transition:all .35s ease;
+.baguetteBox-button svg {
+  fill: white;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.4));
 }
 
-#baguetteBox-overlay.visible img{
-transform:scale(1);
-opacity:1;
+/* ---------- loading / error message ---------- */
+#status {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--btn-color);
+  font-size: 1rem;
 }
 
-
-/* ---------- navigation arrows minimal ---------- */
-
-.baguetteBox-button{
-background:transparent !important;
-opacity:0;
-transition:opacity .25s ease;
-}
-
-
-/* show arrows only when hovering */
-
-#baguetteBox-overlay:hover .baguetteBox-button{
-opacity:.35;
-}
-
-#baguetteBox-overlay:hover .baguetteBox-button:hover{
-opacity:.75;
-}
-
-
-/* ---------- arrow icon style ---------- */
-
-.baguetteBox-button svg{
-fill:white;
-filter:drop-shadow(0 0 4px rgba(0,0,0,0.4));
-}
-  
 </style>
-
 </head>
 
 <body>
 
+<!-- Mode toggle -->
+<button id="mode-btn" aria-label="Toggle colour mode">🌙</button>
+
 <div class="gallery" id="gallery"></div>
+<div id="status">Loading images…</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/baguettebox.js/1.8.1/baguetteBox.min.js"></script>
 
 <script>
 
-const username = "a3yk"
-const repo = "portfolio"
-const folder = "gallery/caporciano"   // example: projects/images
+/* =====================================================================
+   GITHUB CONFIG
+===================================================================== */
+const USERNAME = "a3yk";
+const REPO     = "portfolio";
+const FOLDER   = "gallery/caporciano";   // change as needed
+const BRANCH   = "main";                 // change to "master" if needed
 
-const apiURL = `https://api.github.com/repos/${username}/${repo}/contents/${folder}`
+const API_URL  = `https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FOLDER}?ref=${BRANCH}`;
 
-fetch(apiURL)
-.then(res => res.json())
-.then(data => {
+/* =====================================================================
+   LIGHT / DARK MODE
+===================================================================== */
+const modeBtn = document.getElementById("mode-btn");
 
-const gallery = document.getElementById("gallery")
+function applyMode(mode) {
+  document.body.classList.toggle("dark", mode === "dark");
+  modeBtn.textContent = mode === "dark" ? "☀️" : "🌙";
+}
 
-data
-.filter(file => file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+// Respect OS preference on first visit, then remember choice
+const saved = localStorage.getItem("gallery-mode");
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+applyMode(saved || (prefersDark ? "dark" : "light"));
 
-// auto sort by filename
-.sort((a,b)=>a.name.localeCompare(b.name))
+modeBtn.addEventListener("click", () => {
+  const next = document.body.classList.contains("dark") ? "light" : "dark";
+  applyMode(next);
+  localStorage.setItem("gallery-mode", next);
+});
 
-.forEach(file => {
+/* =====================================================================
+   NUMERIC SORT HELPER
+   Extracts the first number found in a filename for comparison.
+   "12_image.jpg" → 12,  "page_3.webp" → 3,  "001.jpg" → 1
+===================================================================== */
+function numericKey(filename) {
+  const match = filename.match(/\d+/);
+  return match ? parseInt(match[0], 10) : Infinity;
+}
 
-gallery.innerHTML += `
-<a class="lightbox" href="${file.download_url}">
-<img loading="lazy" src="${file.download_url}">
-</a>
-`
+/* =====================================================================
+   FETCH & BUILD GALLERY
+===================================================================== */
+const gallery  = document.getElementById("gallery");
+const statusEl = document.getElementById("status");
 
-})
+fetch(API_URL)
+  .then(res => {
+    if (!res.ok) throw new Error(`GitHub API error ${res.status}`);
+    return res.json();
+  })
+  .then(data => {
 
-baguetteBox.run('.gallery')
+    const images = data
+      .filter(file => /\.(jpe?g|png|gif|webp)$/i.test(file.name))
+      .sort((a, b) => {
+        // Primary: numeric order
+        const diff = numericKey(a.name) - numericKey(b.name);
+        // Secondary: alphabetical fallback if numbers are equal
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      });
 
-})
+    if (images.length === 0) {
+      statusEl.textContent = "⚠️ No images found in the repository folder.";
+      return;
+    }
+
+    statusEl.remove(); // hide loading message
+
+    images.forEach(file => {
+      gallery.innerHTML += `
+        <a class="lightbox" href="${file.download_url}">
+          <img loading="lazy" src="${file.download_url}" alt="${file.name}">
+        </a>
+      `;
+    });
+
+    baguetteBox.run(".gallery");
+  })
+  .catch(err => {
+    statusEl.textContent = `⚠️ Could not load images: ${err.message}`;
+    console.error(err);
+  });
 
 </script>
-
 </body>
 </html>
