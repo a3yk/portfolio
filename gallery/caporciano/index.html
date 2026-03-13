@@ -218,13 +218,19 @@ fetch(API_URL)
 
     statusEl.remove(); // hide loading message
 
-    images.forEach(file => {
-      gallery.innerHTML += `
-        <a class="lightbox" href="${file.download_url}">
-          <img loading="lazy" src="${file.download_url}" alt="${file.name}">
-        </a>
-      `;
-    });
+    // images.forEach(file => {
+    //   gallery.innerHTML += `
+    //     <a class="lightbox" href="${file.download_url}">
+    //       <img loading="lazy" src="${file.download_url}" alt="${file.name}">
+    //     </a>
+    //   `;
+    // });
+
+    gallery.innerHTML = images.map(file => `
+  <a class="lightbox" href="${file.download_url}">
+    <img loading="lazy" src="${file.download_url}" alt="${file.name}">
+  </a>
+`).join('');
 
     baguetteBox.run(".gallery");
   })
