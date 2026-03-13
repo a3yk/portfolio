@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Full-Screen Responsive Image Slider</title>
+  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap");
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Lexend", sans-serif;
+      background-color: #362a2b;
+      color: #e5ebf3;
+    }
+
+    .slider {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 0.4s ease-in-out;
+      background-size: cover;
+      background-position: center top;
+      background-repeat: no-repeat;
+    }
+
+    .slide.current {
+      opacity: 1;
+    }
+
+    .buttons button#prev {
+      position: absolute;
+      top: 50%;
+      left: 1rem;
+    }
+
+    .buttons button#next {
+      position: absolute;
+      top: 50%;
+      right: 1rem;
+    }
+
+    .buttons button {
+      border: 2px solid #e5ebf3;
+      background-color: transparent;
+      color: #e5ebf3;
+      cursor: pointer;
+      padding: 13px 15px;
+      border-radius: 50%;
+      outline: none;
+    }
+
+    .buttons button:hover {
+      background-color: #e5ebf3;
+      color: #362a2b;
+    }
+
+    /* Loading state */
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #e5ebf3;
+      z-index: 999;
+    }
+
+    .loading-spinner {
+      width: 1.2rem;
+      height: 1.2rem;
+      border: 2px solid rgba(229, 235, 243, 0.3);
+      border-top-color: #e5ebf3;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #loading.hidden {
+      display: none;
+    }
+
+    /* Hide buttons until slides are ready */
+    .buttons.hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="loading">
+    <span class="loading-spinner"></span>
+    Loading slides…
+  </div>
+
+  <div class="slider" id="slider"></div>
+
+  <div class="buttons hidden" id="buttons">
+    <button id="prev"><i class="fas fa-arrow-left"></i></button>
+    <button id="next"><i class="fas fa-arrow-right"></i></button>
+  </div>
+
+  <script>
+    /* =====================================================================
+       GITHUB CONFIG — adjust these if the repo/branch/folder changes
+    ===================================================================== */
+    const GITHUB_USER   = 'a3yk';
+    const GITHUB_REPO   = 'portfolio';
+    const GITHUB_BRANCH = 'main';           // change to 'master' if needed
+    const GITHUB_FOLDER = 'slides/biotransfomation';
+
+    const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_FOLDER}`;
+    const API_URL  = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_FOLDER}?ref=${GITHUB_BRANCH}`;
+
+    /* =====================================================================
+       AUTO SLIDE CONFIG
+    ===================================================================== */
+    const auto         = true;
+    const intervalTime = 5000;
+    let   slideInterval;
+
+    /* =====================================================================
+       BUILD SLIDER FROM GITHUB IMAGES
+    ===================================================================== */
+    async function buildSlider() {
+      const loadingEl = document.getElementById('loading');
+      const slider    = document.getElementById('slider');
+      const buttons   = document.getElementById('buttons');
+
+      try {
+        /* 1. Fetch file list from GitHub Contents API */
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error(`GitHub API responded with ${res.status}`);
+        const files = await res.json();
+
+        /* 2. Filter image files and sort numerically
+              Accepts: page_1.jpg, page_1.webp, 1.jpg, slide_1.png, etc.
+              i.e. any file whose name contains a number and is an image. */
+        const images = files
+          .filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f.name))
+          .sort((a, b) => {
+            const num = s => {
+              const m = s.name.match(/\d+/);
+              return m ? parseInt(m[0], 10) : 0;
+            };
+            return num(a) - num(b);
+          });
+
+        if (images.length === 0) {
+          loadingEl.querySelector('.loading-spinner').remove();
+          loadingEl.textContent = '⚠️ No images found in the repository folder.';
+          return;
+        }
+
+        /* 3. Create a slide div for each image */
+        images.forEach((img, index) => {
+          const slide       = document.createElement('div');
+          slide.className   = 'slide' + (index === 0 ? ' current' : '');
+          slide.style.backgroundImage = `url("${RAW_BASE}/${img.name}")`;
+          slider.appendChild(slide);
+        });
+
+        /* 4. Hide loader, show buttons */
+        loadingEl.classList.add('hidden');
+        buttons.classList.remove('hidden');
+
+        /* 5. Wire up controls using the dynamically created slides */
+        initControls();
+
+      } catch (err) {
+        loadingEl.querySelector('.loading-spinner')?.remove();
+        loadingEl.textContent = `⚠️ Could not load slides: ${err.message}`;
+        console.error(err);
+      }
+    }
+
+    /* =====================================================================
+       SLIDER CONTROLS
+    ===================================================================== */
+    function initControls() {
+      const nextButton = document.getElementById('next');
+      const prevButton = document.getElementById('prev');
+
+      const getSlides  = () => document.querySelectorAll('.slide');
+
+      const nextSlide = () => {
+        const slides  = getSlides();
+        const current = document.querySelector('.current');
+        current.classList.remove('current');
+        (current.nextElementSibling || slides[0]).classList.add('current');
+      };
+
+      const prevSlide = () => {
+        const slides  = getSlides();
+        const current = document.querySelector('.current');
+        current.classList.remove('current');
+        (current.previousElementSibling || slides[slides.length - 1]).classList.add('current');
+      };
+
+      nextButton.addEventListener('click', () => {
+        nextSlide();
+        if (auto) {
+          clearInterval(slideInterval);
+          slideInterval = setInterval(nextSlide, intervalTime);
+        }
+      });
+
+      prevButton.addEventListener('click', () => {
+        prevSlide();
+        if (auto) {
+          clearInterval(slideInterval);
+          slideInterval = setInterval(nextSlide, intervalTime);
+        }
+      });
+
+      if (auto) {
+        slideInterval = setInterval(nextSlide, intervalTime);
+      }
+    }
+
+    buildSlider();
+  </script>
+
+</body>
+</html>
