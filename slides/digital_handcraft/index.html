@@ -42,9 +42,10 @@
       background-repeat: no-repeat;
     }
 
-    /* On portrait screens, center vertically instead */
-    @media (orientation: portrait) {
+    /* On portrait / mobile screens: show the full image without cropping */
+    @media (orientation: portrait), (max-width: 768px) {
       .slide {
+        background-size: contain;
         background-position: center center;
       }
     }
