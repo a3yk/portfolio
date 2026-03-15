@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/baguettebox.js/1.8.1/baguetteBox.min.css">
+
+<style>
+
+/* ---------- colour tokens ---------- */
+:root {
+  --bg:          #ffffff;
+  --card-shadow: rgba(0,0,0,0.08);
+  --btn-bg:      rgba(0,0,0,0.07);
+  --btn-color:   #333;
+  --btn-hover:   rgba(0,0,0,0.13);
+  --icon-color:  #333;
+}
+
+body.dark {
+  --bg:          #1a1a1a;
+  --card-shadow: rgba(0,0,0,0.4);
+  --btn-bg:      rgba(255,255,255,0.07);
+  --btn-color:   #e5e5e5;
+  --btn-hover:   rgba(255,255,255,0.13);
+  --icon-color:  #e5e5e5;
+}
+
+/* ---------- base ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background-color: var(--bg);
+  transition: background-color 0.3s;
+  font-family: sans-serif;
+}
+
+/* ---------- mode toggle button ---------- */
+/* #mode-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 999;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--btn-bg);
+  color: var(--btn-color);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+} */
+
+/* #mode-btn:hover {
+  background-color: var(--btn-hover);
+} */
+
+/* ---------- gallery grid ---------- */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  padding-top: 64px; /* clear the toggle button */
+}
+
+.gallery a {
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 6px 12px var(--card-shadow);
+  transition: transform 0.2s ease;
+}
+
+.gallery a:hover {
+  transform: translateY(-5px);
+}
+
+.gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease;
+}
+
+.gallery a:hover img {
+  transform: scale(1.04);
+}
+
+/* ---------- baguetteBox overrides ---------- */
+#baguetteBox-overlay {
+  background: rgba(0, 0, 0, 0.88);
+  transition: opacity 0.35s ease;
+}
+
+#baguetteBox-overlay .full-image {
+  padding: 10vh 10vw;
+  box-sizing: border-box;
+}
+
+#baguetteBox-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform: scale(0.96);
+  opacity: 0;
+  transition: all 0.35s ease;
+}
+
+#baguetteBox-overlay.visible img {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.baguetteBox-button {
+  background: transparent !important;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+#baguetteBox-overlay:hover .baguetteBox-button {
+  opacity: 0.35;
+}
+
+#baguetteBox-overlay:hover .baguetteBox-button:hover {
+  opacity: 0.75;
+}
+
+.baguetteBox-button svg {
+  fill: white;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.4));
+}
+
+/* ---------- loading / error message ---------- */
+#status {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--btn-color);
+  font-size: 1rem;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- Mode toggle
+<button id="mode-btn" aria-label="Toggle colour mode">🌙</button> -->
+
+<div class="gallery" id="gallery"></div>
+<div id="status">Loading images…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/baguettebox.js/1.8.1/baguetteBox.min.js"></script>
+
+<script>
+
+/* =====================================================================
+   GITHUB CONFIG
+===================================================================== */
+const USERNAME = "a3yk";
+const REPO     = "portfolio";
+const FOLDER   = "gallery/shell_roof_house";   // change as needed
+const BRANCH   = "main";                 // change to "master" if needed
+
+const API_URL  = `https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FOLDER}?ref=${BRANCH}`;
+
+/* =====================================================================
+   LIGHT / DARK MODE
+===================================================================== */
+// Replace everything under LIGHT / DARK MODE with this:
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+document.body.classList.toggle("dark", prefersDark);
+
+/* =====================================================================
+   NUMERIC SORT HELPER
+   Extracts the first number found in a filename for comparison.
+   "12_image.jpg" → 12,  "page_3.webp" → 3,  "001.jpg" → 1
+===================================================================== */
+function numericKey(filename) {
+  const match = filename.match(/\d+/);
+  return match ? parseInt(match[0], 10) : Infinity;
+}
+
+/* =====================================================================
+   FETCH & BUILD GALLERY
+===================================================================== */
+const gallery  = document.getElementById("gallery");
+const statusEl = document.getElementById("status");
+
+fetch(API_URL)
+  .then(res => {
+    if (!res.ok) throw new Error(`GitHub API error ${res.status}`);
+    return res.json();
+  })
+  .then(data => {
+
+    const images = data
+      .filter(file => /\.(jpe?g|png|gif|webp)$/i.test(file.name))
+      .sort((a, b) => {
+        // Primary: numeric order
+        const diff = numericKey(a.name) - numericKey(b.name);
+        // Secondary: alphabetical fallback if numbers are equal
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      });
+
+    if (images.length === 0) {
+      statusEl.textContent = "⚠️ No images found in the repository folder.";
+      return;
+    }
+
+    statusEl.remove(); // hide loading message
+
+    // images.forEach(file => {
+    //   gallery.innerHTML += `
+    //     <a class="lightbox" href="${file.download_url}">
+    //       <img loading="lazy" src="${file.download_url}" alt="${file.name}">
+    //     </a>
+    //   `;
+    // });
+
+    gallery.innerHTML = images.map(file => `
+  <a class="lightbox" href="${file.download_url}">
+    <img loading="lazy" src="${file.download_url}" alt="${file.name}">
+  </a>
+`).join('');
+
+    baguetteBox.run(".gallery");
+  })
+  .catch(err => {
+    statusEl.textContent = `⚠️ Could not load images: ${err.message}`;
+    console.error(err);
+  });
+
+</script>
+</body>
+</html>
