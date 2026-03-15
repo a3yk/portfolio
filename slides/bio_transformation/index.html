@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Full-Screen Responsive Image Slider</title>
   <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'>
   <style>
@@ -25,6 +26,7 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
+      touch-action: pan-y; /* allow vertical scroll but we'll handle horizontal swipe */
     }
 
     .slide {
@@ -40,38 +42,84 @@
       background-repeat: no-repeat;
     }
 
+    /* On portrait / mobile screens: show the full image without cropping */
+    @media (orientation: portrait), (max-width: 768px) {
+      .slide {
+        background-size: contain;
+        background-position: center center;
+      }
+    }
+
     .slide.current {
       opacity: 1;
     }
 
-    .buttons button#prev {
-      position: absolute;
-      top: 50%;
-      left: 1rem;
-    }
-
-    .buttons button#next {
-      position: absolute;
-      top: 50%;
-      right: 1rem;
-    }
-
+    /* ── Navigation Buttons ── */
     .buttons button {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
       border: 2px solid #e5ebf3;
-      background-color: transparent;
+      background-color: rgba(54, 42, 43, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       color: #e5ebf3;
       cursor: pointer;
       padding: 13px 15px;
       border-radius: 50%;
       outline: none;
+      z-index: 100;
+      transition: background-color 0.2s, color 0.2s;
     }
 
-    .buttons button:hover {
+    .buttons button#prev {
+      left: calc(1rem + env(safe-area-inset-left, 0px));
+    }
+
+    .buttons button#next {
+      right: calc(1rem + env(safe-area-inset-right, 0px));
+    }
+
+    .buttons button:hover,
+    .buttons button:focus-visible {
       background-color: #e5ebf3;
       color: #362a2b;
     }
 
-    /* Loading state */
+    /* Smaller buttons on mobile */
+    @media (max-width: 480px) {
+      .buttons button {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+      }
+
+      .buttons button#prev {
+        left: calc(0.5rem + env(safe-area-inset-left, 0px));
+      }
+
+      .buttons button#next {
+        right: calc(0.5rem + env(safe-area-inset-right, 0px));
+      }
+    }
+
+    /* ── Slide Counter ── */
+    #counter {
+      position: fixed;
+      bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      color: rgba(229, 235, 243, 0.7);
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    #counter.hidden {
+      display: none;
+    }
+
+    /* ── Loading State ── */
     #loading {
       position: fixed;
       top: 50%;
@@ -103,7 +151,6 @@
       display: none;
     }
 
-    /* Hide buttons until slides are ready */
     .buttons.hidden {
       display: none;
     }
@@ -120,9 +167,11 @@
   <div class="slider" id="slider"></div>
 
   <div class="buttons hidden" id="buttons">
-    <button id="prev"><i class="fas fa-arrow-left"></i></button>
-    <button id="next"><i class="fas fa-arrow-right"></i></button>
+    <button id="prev" aria-label="Previous slide"><i class="fas fa-arrow-left"></i></button>
+    <button id="next" aria-label="Next slide"><i class="fas fa-arrow-right"></i></button>
   </div>
+
+  <div id="counter" class="hidden"></div>
 
   <script>
     /* =====================================================================
@@ -130,8 +179,8 @@
     ===================================================================== */
     const GITHUB_USER   = 'a3yk';
     const GITHUB_REPO   = 'portfolio';
-    const GITHUB_BRANCH = 'main';           // change to 'master' if needed
-    const GITHUB_FOLDER = 'slides/bio_transfomation';
+    const GITHUB_BRANCH = 'main';
+    const GITHUB_FOLDER = 'slides/bio_transformation';
 
     const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_FOLDER}`;
     const API_URL  = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_FOLDER}?ref=${GITHUB_BRANCH}`;
@@ -150,23 +199,17 @@
       const loadingEl = document.getElementById('loading');
       const slider    = document.getElementById('slider');
       const buttons   = document.getElementById('buttons');
+      const counter   = document.getElementById('counter');
 
       try {
-        /* 1. Fetch file list from GitHub Contents API */
         const res = await fetch(API_URL);
         if (!res.ok) throw new Error(`GitHub API responded with ${res.status}`);
         const files = await res.json();
 
-        /* 2. Filter image files and sort numerically
-              Accepts: page_1.jpg, page_1.webp, 1.jpg, slide_1.png, etc.
-              i.e. any file whose name contains a number and is an image. */
         const images = files
           .filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f.name))
           .sort((a, b) => {
-            const num = s => {
-              const m = s.name.match(/\d+/);
-              return m ? parseInt(m[0], 10) : 0;
-            };
+            const num = s => { const m = s.name.match(/\d+/); return m ? parseInt(m[0], 10) : 0; };
             return num(a) - num(b);
           });
 
@@ -176,20 +219,18 @@
           return;
         }
 
-        /* 3. Create a slide div for each image */
         images.forEach((img, index) => {
-          const slide       = document.createElement('div');
-          slide.className   = 'slide' + (index === 0 ? ' current' : '');
+          const slide     = document.createElement('div');
+          slide.className = 'slide' + (index === 0 ? ' current' : '');
           slide.style.backgroundImage = `url("${RAW_BASE}/${img.name}")`;
           slider.appendChild(slide);
         });
 
-        /* 4. Hide loader, show buttons */
         loadingEl.classList.add('hidden');
         buttons.classList.remove('hidden');
+        counter.classList.remove('hidden');
 
-        /* 5. Wire up controls using the dynamically created slides */
-        initControls();
+        initControls(images.length);
 
       } catch (err) {
         loadingEl.querySelector('.loading-spinner')?.remove();
@@ -201,41 +242,62 @@
     /* =====================================================================
        SLIDER CONTROLS
     ===================================================================== */
-    function initControls() {
+    function initControls(total) {
       const nextButton = document.getElementById('next');
       const prevButton = document.getElementById('prev');
+      const counter    = document.getElementById('counter');
 
-      const getSlides  = () => document.querySelectorAll('.slide');
+      const getSlides    = () => document.querySelectorAll('.slide');
+      const currentIndex = () => [...getSlides()].findIndex(s => s.classList.contains('current'));
 
-      const nextSlide = () => {
-        const slides  = getSlides();
-        const current = document.querySelector('.current');
-        current.classList.remove('current');
-        (current.nextElementSibling || slides[0]).classList.add('current');
+      const updateCounter = () => {
+        counter.textContent = `${currentIndex() + 1} / ${total}`;
       };
 
-      const prevSlide = () => {
-        const slides  = getSlides();
-        const current = document.querySelector('.current');
-        current.classList.remove('current');
-        (current.previousElementSibling || slides[slides.length - 1]).classList.add('current');
+      updateCounter();
+
+      const goTo = (index) => {
+        const slides = getSlides();
+        slides[currentIndex()].classList.remove('current');
+        slides[(index + total) % total].classList.add('current');
+        updateCounter();
       };
 
-      nextButton.addEventListener('click', () => {
-        nextSlide();
+      const nextSlide = () => goTo(currentIndex() + 1);
+      const prevSlide = () => goTo(currentIndex() - 1);
+
+      const resetInterval = () => {
         if (auto) {
           clearInterval(slideInterval);
           slideInterval = setInterval(nextSlide, intervalTime);
         }
+      };
+
+      nextButton.addEventListener('click', () => { nextSlide(); resetInterval(); });
+      prevButton.addEventListener('click', () => { prevSlide(); resetInterval(); });
+
+      /* ── Keyboard Navigation ── */
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') { nextSlide(); resetInterval(); }
+        if (e.key === 'ArrowLeft')  { prevSlide(); resetInterval(); }
       });
 
-      prevButton.addEventListener('click', () => {
-        prevSlide();
-        if (auto) {
-          clearInterval(slideInterval);
-          slideInterval = setInterval(nextSlide, intervalTime);
+      /* ── Touch / Swipe Support ── */
+      let touchStartX = null;
+
+      document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (e) => {
+        if (touchStartX === null) return;
+        const delta = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(delta) > 40) {          // 40px threshold
+          delta > 0 ? nextSlide() : prevSlide();
+          resetInterval();
         }
-      });
+        touchStartX = null;
+      }, { passive: true });
 
       if (auto) {
         slideInterval = setInterval(nextSlide, intervalTime);
